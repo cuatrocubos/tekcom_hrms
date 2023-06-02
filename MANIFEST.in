@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include tekcom_hrms *.css
+recursive-include tekcom_hrms *.csv
+recursive-include tekcom_hrms *.html
+recursive-include tekcom_hrms *.ico
+recursive-include tekcom_hrms *.js
+recursive-include tekcom_hrms *.json
+recursive-include tekcom_hrms *.md
+recursive-include tekcom_hrms *.png
+recursive-include tekcom_hrms *.py
+recursive-include tekcom_hrms *.svg
+recursive-include tekcom_hrms *.txt
+recursive-exclude tekcom_hrms *.pyc
