@@ -1,0 +1,43 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2023-06-07 23:14:00.787004",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "tipo_bono",
+  "frecuencia"
+ ],
+ "fields": [
+  {
+   "fieldname": "tipo_bono",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Tipo de Bono",
+   "options": "Tipo de Bono",
+   "reqd": 1
+  },
+  {
+   "fieldname": "frecuencia",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Frecuencia",
+   "options": "Quincenal\nMensual",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2023-06-07 23:14:00.787004",
+ "modified_by": "Administrator",
+ "module": "Tekcom Hrms",
+ "name": "Bonos de Empleado",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

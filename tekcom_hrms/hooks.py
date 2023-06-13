@@ -7,6 +7,12 @@ app_description = "Personalizaciones Recursos Humanos para TEK-COM"
 app_email = "jgiron@cuatrocubos.com"
 app_license = "MIT"
 
+fixtures = [
+  {
+    "dt": "Custom Field", "filters": [["module","like","Tekcom Hrms"]]
+  }
+]
+
 # Includes in <head>
 # ------------------
 
@@ -95,7 +101,7 @@ app_license = "MIT"
 # Override standard doctype classes
 
 # override_doctype_class = {
-#	"ToDo": "custom_app.overrides.CustomToDo"
+# 	"Employee": "tekcom_hrms.overrides.employee.Employee"
 # }
 
 # Document Events
