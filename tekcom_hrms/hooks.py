@@ -9,6 +9,9 @@ app_license = "MIT"
 
 fixtures = [
   {
+    "dt": "Print Format", "filters": [["module","in",["Tekcom Hrms"]]] 
+  },
+  {
     "dt": "Custom Field", "filters": [["module","like","Tekcom Hrms"]]
   }
 ]
