@@ -9,13 +9,17 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 
 
 def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips):
-	"""Create one JV per (account, custom_cuenta_secundaria) pair for do_not_include_in_total components.
+	"""Create one JV per custom_cuenta_secundaria for do_not_include_in_total components.
 
 	Called right after the main accrual JV is created/submitted, so this is purely additive:
-	Earning components debit the main account and credit the secondary account;
-	Deduction components debit the secondary account and credit the main account (payable).
+	Earning components debit the Payroll Entry payable account and credit the secondary account;
+	Deduction components debit the secondary account and credit the payable account.
 	"""
 	if not submitted_salary_slips:
+		return {"created": [], "skipped": []}
+
+	payroll_payable_account = payroll_entry.payroll_payable_account
+	if not payroll_payable_account:
 		return {"created": [], "skipped": []}
 
 	component_accounts = {}
@@ -31,19 +35,19 @@ def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips
 					component_accounts[row.salary_component] = frappe.db.get_value(
 						"Salary Component Account",
 						{"parent": row.salary_component, "company": payroll_entry.company},
-						["account", "custom_cuenta_secundaria"],
+						"custom_cuenta_secundaria",
 						cache=True,
-					) or (None, None)
+					)
 
-				account, custom_cuenta_secundaria = component_accounts[row.salary_component]
-				if not account or not custom_cuenta_secundaria:
+				custom_cuenta_secundaria = component_accounts[row.salary_component]
+				if not custom_cuenta_secundaria:
 					continue
 
 				cost_centers = payroll_entry.get_payroll_cost_centers_for_employee(
 					salary_slip.employee, salary_slip.salary_structure
 				)
 
-				bucket = groups.setdefault((account, custom_cuenta_secundaria), {})
+				bucket = groups.setdefault(custom_cuenta_secundaria, {})
 				for cost_center, percentage in cost_centers.items():
 					amount = flt(row.amount) * percentage / 100
 					sub_key = (component_type, cost_center)
@@ -58,18 +62,18 @@ def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips
 	created = []
 	skipped = []
 
-	for (account, custom_cuenta_secundaria), bucket in groups.items():
-		# a pair is only ever booked once per Payroll Entry, regardless of who triggers it
+	for custom_cuenta_secundaria, bucket in groups.items():
+		# a secondary account is only ever booked once per Payroll Entry, regardless of who triggers it
 		if frappe.db.exists(
 			"Journal Entry Account",
 			{
 				"reference_type": "Payroll Entry",
 				"reference_name": payroll_entry.name,
-				"account": account,
+				"account": custom_cuenta_secundaria,
 				"docstatus": 1,
 			},
 		):
-			skipped.append((account, custom_cuenta_secundaria))
+			skipped.append(custom_cuenta_secundaria)
 			continue
 
 		je_accounts = []
@@ -80,9 +84,9 @@ def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips
 				continue
 
 			if component_type == "earnings":
-				debit_account, credit_account = account, custom_cuenta_secundaria
+				debit_account, credit_account = payroll_payable_account, custom_cuenta_secundaria
 			else:
-				debit_account, credit_account = custom_cuenta_secundaria, account
+				debit_account, credit_account = custom_cuenta_secundaria, payroll_payable_account
 
 			for acc, amount_field in (
 				(debit_account, "debit_in_account_currency"),
@@ -97,11 +101,11 @@ def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips
 					"exchange_rate": flt(exchange_rate),
 					"cost_center": cost_center,
 					amount_field: flt(amt, precision),
+					# both sides carry the reference: it links the JV to the Payroll Entry (so it is
+					# cancelled along with it) and lets a re-run detect an already booked account
+					"reference_type": "Payroll Entry",
+					"reference_name": payroll_entry.name,
 				}
-
-				# only the payable-side account carries the Payroll Entry reference
-				if acc == account:
-					je_row.update({"reference_type": "Payroll Entry", "reference_name": payroll_entry.name})
 
 				payroll_entry.update_accounting_dimensions(je_row, accounting_dimensions)
 
@@ -112,7 +116,7 @@ def create_do_not_include_in_total_entries(payroll_entry, submitted_salary_slips
 			journal_entry = payroll_entry.make_journal_entry(
 				je_accounts,
 				currencies,
-				payroll_payable_account=account,
+				payroll_payable_account=payroll_payable_account,
 				voucher_type="Journal Entry",
 				user_remark=_("Non-total salary component entries for {0} to {1}").format(
 					payroll_entry.start_date, payroll_entry.end_date
@@ -144,7 +148,7 @@ def run_do_not_include_in_total_entries(payroll_entry):
 
 	if not result["created"]:
 		if result["skipped"]:
-			return _("No new Journal Entries were needed - all account pairs are already booked.")
+			return _("No new Journal Entries were needed - all secondary accounts are already booked.")
 		return _("No Journal Entries were needed for this Payroll Entry.")
 
 	return _("Created {0} Journal Entry(s): {1}").format(
